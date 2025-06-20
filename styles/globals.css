@@ -1,0 +1,111 @@
+/* Base styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  overflow: visible !important;
+}
+
+html,
+body {
+  height: 100%;
+  background-color: #fefcf3;
+  font-family: "Nunito", sans-serif;
+  font-size: 0.95rem;
+  margin: 0;
+  padding: 0;
+}
+
+/* Navbar */
+.navbar-custom {
+  background-color: #3b0066;
+  padding: 0.75rem 1rem;
+}
+
+.navbar-custom .navbar-brand {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #ffffff !important;
+}
+
+.navbar-custom .nav-link {
+  color: #ffffff !important;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-family: "Nunito", sans-serif;
+}
+
+.navbar-custom .nav-link:hover {
+  color: #ffd700 !important;
+}
+
+/* Remove focus styles on hamburger */
+.navbar-toggler {
+  width: 40px;
+  height: 40px;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar-toggler:focus,
+.navbar-toggler:active,
+.navbar-toggler:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+}
+
+/* Toggler Icon (smaller) */
+.toggler-icon {
+  width: 22px;
+  height: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none; /* optional: ensures span clicks don't interfere */
+}
+
+.toggler-icon span {
+  display: block;
+  height: 2px;
+  background-color: white;
+  border-radius: 1px;
+  transition: all 0.3s ease-in-out;
+}
+
+/* X animation */
+.toggler-icon.open span:nth-child(1) {
+  transform: rotate(45deg) translateY(4px);
+}
+
+.toggler-icon.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.toggler-icon.open span:nth-child(3) {
+  transform: rotate(-45deg) translateY(-4px);
+}
+
+/* Form controls */
+input.form-control,
+select.form-control,
+textarea.form-control {
+  font-size: 0.85rem;
+}
+
+/* Headings */
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: "Nunito", sans-serif;
+}
