@@ -5,6 +5,12 @@ import axios from "axios";
 import type { GetServerSideProps } from "next";
 import toast from "react-hot-toast";
 
+type Tournament = {
+  _id: string;
+  name: string;
+  year: number;
+};
+
 export default function ProfilePage() {
   const { data: session } = useSession();
   const [userData, setUserData] = useState({
@@ -14,6 +20,7 @@ export default function ProfilePage() {
     email: "",
   });
   const [originalData, setOriginalData] = useState(userData);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isChanged, setIsChanged] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -26,6 +33,11 @@ export default function ProfilePage() {
           setOriginalData(res.data);
         })
         .catch((err) => console.error("Failed to load user data:", err));
+
+      axios
+        .get(`/api/tournaments?email=${session.user.email}`)
+        .then((res) => setTournaments(res.data))
+        .catch((err) => console.error("Failed to load tournaments:", err));
     }
   }, [session]);
 
@@ -40,23 +52,26 @@ export default function ProfilePage() {
     );
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     setSaving(true);
 
-    const saveRequest = axios.post("/api/profile", {
+    const saveData = {
       email: userData.email,
       firstName: userData.firstName,
       lastName: userData.lastName,
       username: userData.username,
-    });
+    };
+
+    const savePromise = axios.post("/api/profile", saveData);
 
     toast
       .promise(
-        saveRequest,
+        savePromise,
         {
           loading: "Saving changes...",
           success: "Profile updated successfully!",
-          error: "Failed to update profile.",
+          error: (err) =>
+            err?.response?.data?.error || "Unexpected error occurred.",
         },
         { position: "top-center" }
       )
@@ -64,9 +79,26 @@ export default function ProfilePage() {
         setOriginalData(userData);
         setIsChanged(false);
       })
-      .catch((err) => console.error("Save failed:", err))
-      .finally(() => setSaving(false));
+      .catch((err) => {
+        console.error("Save failed:", err);
+        // No toast here — already handled via toast.promise `error`
+      })
+      .finally(() => {
+        setSaving(false);
+      });
   };
+
+  // Group tournaments by year, sorted descending
+  const groupedTournaments = tournaments.reduce((acc, tournament) => {
+    const { year, name, _id } = tournament;
+    if (!acc[year]) acc[year] = [];
+    acc[year].push({ _id, name });
+    return acc;
+  }, {} as Record<number, { _id: string; name: string }[]>);
+
+  const sortedYears = Object.keys(groupedTournaments)
+    .map(Number)
+    .sort((a, b) => b - a);
 
   return (
     <>
@@ -84,10 +116,7 @@ export default function ProfilePage() {
         <h2 className="mb-4">You_</h2>
         <div className="row row-cols-1 row-cols-md-3 g-4">
           <div className="col d-flex justify-content-center">
-            <div
-              className="card border-0 shadow-sm"
-              style={{ width: "500px", height: "auto" }}
-            >
+            <div className="card border-0 shadow-sm" style={{ width: "500px" }}>
               <div className="card-body">
                 <h5 className="card-title">Personal Stuff</h5>
                 <hr className="text-muted my-2" />
@@ -159,44 +188,58 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Placeholder cards */}
-          {["Tournament History", "Payment History"].map((title, index) => (
-            <div key={index} className="col d-flex justify-content-center">
-              <div
-                className="card border-0 shadow-sm"
-                style={{ width: "500px", height: "300px" }}
-              >
-                <div className="card-body">
-                  <h5 className="card-title">{title}</h5>
-                  <hr className="text-muted my-2" />
-                  <p className="card-text small text-muted">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                    Nulla nec justo a nisl.
-                  </p>
-                </div>
+          {/* Tournament History Card */}
+          <div className="col d-flex justify-content-center">
+            <div className="card border-0 shadow-sm" style={{ width: "500px" }}>
+              <div className="card-body">
+                <h5 className="card-title">Tournament History</h5>
+                <hr className="text-muted my-2" />
+                {sortedYears.length > 0 ? (
+                  <div className="small text-muted">
+                    {sortedYears.map((year) => (
+                      <div key={year} className="mb-3">
+                        <strong>{year}</strong>
+                        <ul className="list-unstyled mb-0 ms-2 mt-1">
+                          {groupedTournaments[year].map((t) => (
+                            <li key={t._id}>{t.name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="small text-muted">No tournaments found.</p>
+                )}
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* Payment History Placeholder */}
+          <div className="col d-flex justify-content-center">
+            <div
+              className="card border-0 shadow-sm"
+              style={{ width: "500px", height: "300px" }}
+            >
+              <div className="card-body">
+                <h5 className="card-title">Payment History</h5>
+                <hr className="text-muted my-2" />
+                <p className="card-text small text-muted">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla
+                  nec justo a nisl.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </>
   );
 }
 
-// ✅ Server-side protection
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getSession(context);
-
   if (!session) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false,
-      },
-    };
+    return { redirect: { destination: "/login", permanent: false } };
   }
-
-  return {
-    props: {},
-  };
+  return { props: {} };
 };

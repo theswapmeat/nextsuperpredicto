@@ -1,4 +1,4 @@
-export interface Tournament {
+export interface TournamentType {
   _id: string;
   name: string;
   year: number;

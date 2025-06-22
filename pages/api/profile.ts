@@ -7,63 +7,89 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await connectToDatabase();
+  try {
+    await connectToDatabase();
 
-  const { email } = req.method === "GET" ? req.query : req.body;
-  if (!email || typeof email !== "string") {
-    return res.status(400).json({ error: "Invalid email" });
-  }
+    const { email } = req.method === "GET" ? req.query : req.body;
+    if (!email || typeof email !== "string") {
+      console.error("[profile] Invalid email:", email);
+      return res.status(400).json({ error: "Invalid email" });
+    }
 
-  if (req.method === "GET") {
-    const user = await User.findOne({ email }).lean();
-    if (!user) return res.status(404).json({ error: "User not found" });
+    // -------------------------------
+    // GET: Fetch user profile
+    // -------------------------------
+    if (req.method === "GET") {
+      const user = (await User.findOne({ email }).lean()) as UserType | null;
 
-    const typedUser = user as unknown as UserType;
+      if (!user) {
+        console.warn("[profile] User not found for:", email);
+        return res.status(404).json({ error: "User not found" });
+      }
 
-    return res.json({
-      firstName: typedUser.firstName || "",
-      lastName: typedUser.lastName || "",
-      username: typedUser.username || "",
-      email: typedUser.email,
-    });
-  }
-
-  if (req.method === "POST") {
-    const { firstName, lastName, username } = req.body;
-
-    // ✅ Basic Validation
-    if (
-      !firstName ||
-      typeof firstName !== "string" ||
-      firstName.trim().length < 2 ||
-      !lastName ||
-      typeof lastName !== "string" ||
-      lastName.trim().length < 2 ||
-      !username ||
-      typeof username !== "string" ||
-      username.trim().length < 3
-    ) {
-      return res.status(400).json({
-        error: "Please provide valid first name, last name, and username.",
+      return res.status(200).json({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        username: user.username || "",
+        email: user.email,
       });
     }
 
-    await User.updateOne(
-      { email },
-      {
-        $set: {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          username: username.trim().toLowerCase(),
-        },
+    // -------------------------------
+    // POST: Update user profile
+    // -------------------------------
+    if (req.method === "POST") {
+      const { firstName, lastName, username } = req.body;
+
+      if (
+        !firstName ||
+        typeof firstName !== "string" ||
+        firstName.trim().length < 2 ||
+        !lastName ||
+        typeof lastName !== "string" ||
+        lastName.trim().length < 2 ||
+        !username ||
+        typeof username !== "string" ||
+        username.trim().length < 3
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Please provide valid profile information." });
       }
-    );
 
-    return res.status(200).json({
-      success: true,
-      message: "Profile updated successfully.",
-    });
+      const trimmedUsername = username.trim().toLowerCase();
+
+      const existing = await User.findOne({
+        username: trimmedUsername,
+        email: { $ne: email },
+      });
+
+      if (existing) {
+        return res
+          .status(400)
+          .json({ error: "That username is already taken." });
+      }
+
+      await User.updateOne(
+        { email },
+        {
+          $set: {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            username: trimmedUsername,
+          },
+        }
+      );
+
+      return res.status(200).json({ success: true });
+    }
+
+    // -------------------------------
+    // Unsupported method
+    // -------------------------------
+    return res.status(405).json({ error: "Method not allowed" });
+  } catch (err) {
+    console.error("[profile] Unhandled server error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
-
-  return res.status(405).end();
 }
