@@ -1,10 +1,12 @@
-import mongoose from "mongoose"
+import mongoose from "mongoose";
 
 const TournamentSchema = new mongoose.Schema({
   name: { type: String, required: true },
   year: Number,
   is_active: { type: Boolean, default: true },
+  is_completed: { type: Boolean, default: false }, // ✅ added field
   createdAt: { type: Date, default: Date.now },
-})
+});
 
-export default mongoose.models.Tournament || mongoose.model("Tournament", TournamentSchema)
+export default mongoose.models.Tournament ||
+  mongoose.model("Tournament", TournamentSchema);

@@ -2,19 +2,34 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [navbarOpen, setNavbarOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const toggleNavbar = () => setNavbarOpen(!navbarOpen);
+  const toggleDropdown = () => setDropdownOpen((prev) => !prev);
   const isAdmin = session?.user?.email === "admin@superpredicto.com";
 
   const handleLogout = async () => {
@@ -50,56 +65,66 @@ export default function Navbar() {
               </Link>
             </li>
             <li className="nav-item">
-              <Link href="/leaderboard" className="nav-link">
-                Leaderboard
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/submitpicks" className="nav-link">
-                Edit / Submit Picks
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/predictions" className="nav-link">
-                All Predictions
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/schedule" className="nav-link">
-                Schedule
-              </Link>
-            </li>
-            <li className="nav-item">
               <Link href="/scoring" className="nav-link">
                 Scoring Guidelines
               </Link>
             </li>
-            {mounted && status === "authenticated" ? (
+
+            {mounted && status === "authenticated" && (
               <>
-                {isAdmin && (
-                  <li className="nav-item">
-                    <Link href="/dashboard" className="nav-link">
-                      Dashboard
-                    </Link>
-                  </li>
-                )}
                 <li className="nav-item">
-                  <button
-                    className="btn btn-link nav-link"
-                    onClick={handleLogout}
-                    style={{ cursor: "pointer" }}
-                  >
-                    Logout
-                  </button>
+                  <Link href="/schedule" className="nav-link">
+                    Schedule
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link href="/leaderboard" className="nav-link">
+                    Leaderboard
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link href="/submitpicks" className="nav-link">
+                    Edit / Submit Picks
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link href="/predictions" className="nav-link">
+                    All Predictions
+                  </Link>
+                </li>
+                <li className="nav-item dropdown-wrapper">
+                  <div className="avatar-wrapper">
+                    <img
+                      src="/avatars/default.png"
+                      alt="User avatar"
+                      className="rounded-circle avatar-img"
+                    />
+                    <div className="custom-dropdown">
+                      <Link href="/profile" className="dropdown-item">
+                        User Profile
+                      </Link>
+                      {isAdmin && (
+                        <Link href="/dashboard" className="dropdown-item">
+                          Dashboard
+                        </Link>
+                      )}
+                      <div className="dropdown-divider"></div>
+                      <button onClick={handleLogout} className="dropdown-item">
+                        Logout
+                      </button>
+                    </div>
+                  </div>
                 </li>
               </>
-            ) : (
+            )}
+
+            {!mounted || status !== "authenticated" ? (
               <li className="nav-item">
                 <Link href="/login" className="nav-link">
                   Login
                 </Link>
               </li>
-            )}
+            ) : null}
           </ul>
         </div>
       </div>
